@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package bidding;
+
+option go_package = "grpc/proto";
+
+service Bidding {
+  rpc ConnectToReplicator(ConnectRequest) returns (stream ReplicatorUpdate);
+}
+
+message ConnectRequest {
+
+}
+
+message ReplicatorUpdate {
+  float bid = 1;
+  string bidder = 2;
+  int64 timeLeft = 3;
+  bool isResult = 4;
+}
+
