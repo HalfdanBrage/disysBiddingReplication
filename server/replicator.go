@@ -7,7 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
+	"strconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -15,38 +15,57 @@ import (
 
 type Replicator struct {
 	proto.UnimplementedBiddingServer
-	id int
+	id   int
 	port string
 }
 
+var (
+	port           = flag.String("port", "", "server port number")
+	role           = flag.String("role", "", "replicator role")
+	highestBid     = &proto.Amount{Amount: 0}
+	bidUpdateChans = []chan *proto.ReplicatorUpdate{}
+)
 
-var port = flag.String("port", "", "server port number")
-var role = flag.String("role", "", "replicator role")
+func (r *Replicator) Bid(ctx context.Context, amount *proto.Amount) (*proto.BidAck, error) {
+	println("Recieved bid from: " + amount.Name + " for amount: " + strconv.Itoa(int(amount.Amount)))
+	if amount.Amount > highestBid.Amount {
+		highestBid = amount
+		println("Bid " + strconv.Itoa(int(highestBid.Amount)) + " from " + highestBid.Name + " is now the highest bid")
+		for _, replicatorChan := range bidUpdateChans {
+			replicatorChan <- &proto.ReplicatorUpdate{
+				Bid: highestBid,
+			}
+		}
 
-func (r *Replicator) ConnectToReplicator(connectRequest *proto.ConnectRequest, stream proto.Bidding_ConnectToReplicatorServer) error {
-
-	bid1 := &proto.ReplicatorUpdate{
-		Bidder: "bidder1",
 	}
-
-	bid2 := &proto.ReplicatorUpdate{
-		Bidder: "bidder2",
+	ack := &proto.BidAck{
+		HighestBid: highestBid,
 	}
-
-	stream.Send(bid1)
-
-	time.Sleep(time.Second)
-
-	stream.Send(bid2)
-
-	return nil
+	return ack, nil
 }
 
+func (r *Replicator) Result(ctx context.Context, _ *proto.Void) (*proto.Outcome, error) {
+	out := &proto.Outcome{
+		HighestBid: highestBid,
+		IsResult:   false,
+	}
+	return out, nil
+}
 
-//When setting a secondary replicator as primary remember to stop secondary processes
+func (r *Replicator) ConnectToReplicator(connectRequest *proto.Void, stream proto.Bidding_ConnectToReplicatorServer) error {
+	replicatorChan := make(chan *proto.ReplicatorUpdate)
+	bidUpdateChans = append(bidUpdateChans, replicatorChan)
+
+	for {
+		ru := <-replicatorChan
+		stream.Send(ru)
+	}
+}
+
+// When setting a secondary replicator as primary remember to stop secondary processes
 func setupAsPrimary() {
 	replicator := &Replicator{
-		id: 0,
+		id:   0,
 		port: *port,
 	}
 
@@ -56,7 +75,7 @@ func setupAsPrimary() {
 func startServer(replicator *Replicator) {
 	grpcServer := grpc.NewServer()
 
-	listener, err := net.Listen("tcp", ":" + *port)
+	listener, err := net.Listen("tcp", ":"+*port)
 	checkError(err)
 	log.Println("Primary replicator started on port " + *port)
 
@@ -72,7 +91,7 @@ func requestPrimaryConnection() {
 
 	primaryConn := proto.NewBiddingClient(conn)
 
-	updateStream, err := primaryConn.ConnectToReplicator(context.Background(), &proto.ConnectRequest{})
+	updateStream, err := primaryConn.ConnectToReplicator(context.Background(), &proto.Void{})
 	checkError(err)
 	for {
 		update, err := updateStream.Recv()
@@ -80,7 +99,8 @@ func requestPrimaryConnection() {
 			break
 		}
 		checkError(err)
-		log.Println(update.Bidder)
+		highestBid = update.Bid
+		log.Println("Recieved replicator update with highest bid " + update.Bid.Name + " " + strconv.Itoa(int(update.Bid.Amount)))
 	}
 }
 
@@ -96,7 +116,7 @@ func main() {
 	if *role == "primary" {
 		setupAsPrimary()
 	} else {
-		go requestPrimaryConnection()	
+		go requestPrimaryConnection()
 	}
 
 	for {

@@ -5,17 +5,33 @@ package bidding;
 option go_package = "grpc/proto";
 
 service Bidding {
-  rpc ConnectToReplicator(ConnectRequest) returns (stream ReplicatorUpdate);
+  rpc ConnectToReplicator(Void) returns (stream ReplicatorUpdate);
+  rpc Bid(Amount) returns (BidAck);
+  rpc Result(Void) returns (Outcome);
 }
 
-message ConnectRequest {
+message Amount {
+  int64 amount = 1;
+  string name = 2;
+}
 
+message BidAck {
+  Amount highestBid = 1;
+  int64 timeLeft = 2;
+}
+
+message Outcome {
+  Amount highestBid = 1;
+  bool isResult = 2;
 }
 
 message ReplicatorUpdate {
-  float bid = 1;
-  string bidder = 2;
-  int64 timeLeft = 3;
-  bool isResult = 4;
+  Amount bid = 1;
+  int64 timeLeft = 2;
+  bool isResult = 3;
 }
 
+
+message Void {
+
+}
