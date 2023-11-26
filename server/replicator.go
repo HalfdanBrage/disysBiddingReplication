@@ -39,6 +39,7 @@ var (
 
 func (r *Replicator) Bid(ctx context.Context, amount *proto.Amount) (*proto.BidAck, error) {
 	println("Recieved bid from: " + amount.Name + " for amount: " + strconv.Itoa(int(amount.Amount)))
+	mute.Lock()
 	if amount.Amount > highestBid.Amount {
 		highestBid = amount
 		println("Bid " + strconv.Itoa(int(highestBid.Amount)) + " from " + highestBid.Name + " is now the highest bid")
@@ -50,6 +51,7 @@ func (r *Replicator) Bid(ctx context.Context, amount *proto.Amount) (*proto.BidA
 		}
 
 	}
+	mute.Unlock()
 	ack := &proto.BidAck{
 		HighestBid: highestBid,
 	}
