@@ -12,7 +12,8 @@ Both clients and secondary replicators rely on the existance of a primary replic
 
 
 #### Start a primary replicator
-    go run server/replicator.go --port xxxx --role primary
+    go run server/replicator.go --role primary --time 60 --port xxxx
+Time represents the amount of time the auction should take in seconds
 
 #### Start a secondary replicator
     go run server/replicator.go --port xxxx
