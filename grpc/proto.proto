@@ -29,6 +29,8 @@ message ReplicatorUpdate {
   Amount bid = 1;
   int64 timeLeft = 2;
   bool isResult = 3;
+  int64 id = 4;
+  int64 primaryId = 5;
 }
 
 

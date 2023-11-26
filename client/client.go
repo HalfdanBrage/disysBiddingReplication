@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"context"
 	"flag"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -33,15 +32,20 @@ func ConnectToServer() {
 
 	client = proto.NewBiddingClient(conn)
 
-	log.Println("the connection is: ", conn.GetState().String())
+	cprint("the connection is: " + conn.GetState().String())
 }
 
 func getHighestBid() {
 	for {
 		time.Sleep(time.Second)
 		ack, err := client.Result(context.Background(), &proto.Void{})
-		checkError(err)
-		handleHighestBid(ack)
+		if err != nil {
+			println("Server has crashed, reconnecting...")
+			time.Sleep(5 * time.Second)
+			ConnectToServer()
+		} else {
+			handleHighestBid(ack)
+		}
 
 	}
 }
@@ -71,7 +75,6 @@ func main() {
 		checkError(err)
 		cprint(string(ack.HighestBid))
 	*/
-	cprint("")
 	go getHighestBid()
 	for {
 		input.Scan()
