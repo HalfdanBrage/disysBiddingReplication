@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"google.golang.org/grpc"
@@ -29,8 +30,9 @@ var (
 	id             int = 0
 	nextId         int
 	primaryId      int
-	auctionTime    int  = 60
+	auctionTime    int  = 300
 	timerStarted   bool = false
+	mute           sync.Mutex
 )
 
 func (r *Replicator) Bid(ctx context.Context, amount *proto.Amount) (*proto.BidAck, error) {
@@ -65,6 +67,7 @@ func (r *Replicator) ConnectToReplicator(connectRequest *proto.Void, stream prot
 	replicatorChan := make(chan *proto.ReplicatorUpdate)
 	bidUpdateChans = append(bidUpdateChans, replicatorChan)
 
+	mute.Lock()
 	setupRu := &proto.ReplicatorUpdate{
 		TimeLeft:  int64(auctionTime),
 		Id:        int64(nextId),
@@ -73,6 +76,7 @@ func (r *Replicator) ConnectToReplicator(connectRequest *proto.Void, stream prot
 	}
 	stream.Send(setupRu)
 	nextId += 1
+	mute.Unlock()
 
 	for {
 		ru := <-replicatorChan

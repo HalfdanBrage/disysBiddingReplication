@@ -94,7 +94,9 @@ func main() {
 					Name:   name,
 				}
 				_, err := client.Bid(context.Background(), bid)
-				checkError(err)
+				if err != nil {
+					cprint("Bid failed, please try again")
+				}
 			}
 
 		} else if inputWords[0] == "exit" {
