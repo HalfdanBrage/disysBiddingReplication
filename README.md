@@ -22,7 +22,7 @@ Therefore start a primary replicator before attempting to start a secondary.
 ### Client
 
 #### Start a client
-    go run client/client.go
+    go run client/client.go --port xxxx
 Clients are also reliant on a primary replicator existing on startup.\
 When starting the client you will be prompted to input a name. This name is used to identify the bidder, so don't use the same name for multiple different bidders
 
