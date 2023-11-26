@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -45,8 +46,11 @@ func getHighestBid() {
 			ConnectToServer()
 		} else {
 			handleHighestBid(ack)
+			if ack.IsResult {
+				cprint("THE AUCTION HAS CONCLUDED!! \n WINNER: " + ack.HighestBid.Name + "!!! \n WITH THE BID: " + fmt.Sprint(int(ack.HighestBid.Amount)) + "!!! ")
+				return
+			}
 		}
-
 	}
 }
 

@@ -29,6 +29,8 @@ var (
 	id             int = 0
 	nextId         int
 	primaryId      int
+	auctionTime    int  = 60
+	timerStarted   bool = false
 )
 
 func (r *Replicator) Bid(ctx context.Context, amount *proto.Amount) (*proto.BidAck, error) {
@@ -38,7 +40,8 @@ func (r *Replicator) Bid(ctx context.Context, amount *proto.Amount) (*proto.BidA
 		println("Bid " + strconv.Itoa(int(highestBid.Amount)) + " from " + highestBid.Name + " is now the highest bid")
 		for _, replicatorChan := range bidUpdateChans {
 			replicatorChan <- &proto.ReplicatorUpdate{
-				Bid: highestBid,
+				TimeLeft: int64(auctionTime),
+				Bid:      highestBid,
 			}
 		}
 
@@ -51,8 +54,9 @@ func (r *Replicator) Bid(ctx context.Context, amount *proto.Amount) (*proto.BidA
 
 func (r *Replicator) Result(ctx context.Context, _ *proto.Void) (*proto.Outcome, error) {
 	out := &proto.Outcome{
+		TimeLeft:   int64(auctionTime),
 		HighestBid: highestBid,
-		IsResult:   false,
+		IsResult:   auctionTime == 0,
 	}
 	return out, nil
 }
@@ -62,6 +66,7 @@ func (r *Replicator) ConnectToReplicator(connectRequest *proto.Void, stream prot
 	bidUpdateChans = append(bidUpdateChans, replicatorChan)
 
 	setupRu := &proto.ReplicatorUpdate{
+		TimeLeft:  int64(auctionTime),
 		Id:        int64(nextId),
 		PrimaryId: int64(id),
 		Bid:       highestBid,
@@ -98,8 +103,23 @@ func startServer(replicator *Replicator) {
 
 	proto.RegisterBiddingServer(grpcServer, replicator)
 
+	go updateTime()
+
 	sErr := grpcServer.Serve(listener)
 	checkError(sErr)
+
+}
+
+func updateTime() {
+	if !timerStarted {
+		timerStarted = true
+		for auctionTime > 0 {
+			time.Sleep(time.Second)
+			println(auctionTime)
+			auctionTime--
+		}
+		timerStarted = false
+	}
 }
 
 func requestPrimaryConnection() {
@@ -110,6 +130,7 @@ func requestPrimaryConnection() {
 
 	updateStream, err := primaryConn.ConnectToReplicator(context.Background(), &proto.Void{})
 	checkError(err)
+	go updateTime()
 	for {
 		update, err := updateStream.Recv()
 		if err == io.EOF {
@@ -133,6 +154,7 @@ func requestPrimaryConnection() {
 			println("Secondary replicator has id: " + fmt.Sprint(id))
 		}
 		highestBid = update.Bid
+		auctionTime = int(update.TimeLeft)
 		log.Println("Recieved replicator update with highest bid " + update.Bid.Name + " " + strconv.Itoa(int(update.Bid.Amount)))
 
 	}

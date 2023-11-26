@@ -23,6 +23,7 @@ message BidAck {
 message Outcome {
   Amount highestBid = 1;
   bool isResult = 2;
+  int64 timeLeft = 3;
 }
 
 message ReplicatorUpdate {
