@@ -1,0 +1,130 @@
+Primary replicator :
+
+$ go run server/replicator.go --port 6969 --role primary --time 100
+2023/11/26 15:20:12 Primary replicator started on port 6969
+100 seconds left of the auction
+90 seconds left of the auction
+80 seconds left of the auction
+Recieved bid from: habr for amount: 50
+Bid 50 from habr is now the highest bid
+70 seconds left of the auction
+Recieved bid from: tpep for amount: 70
+Bid 70 from tpep is now the highest bid
+60 seconds left of the auction
+
+// CTRL+C clicked to simulate crash failure
+exit status 0xc000013a
+
+
+Secondary replicator:
+
+$ go run server/replicator.go --port 6969
+Secondary replicator has id: 2
+2023/11/26 15:20:17 Recieved replicator update with highest bid  0
+90 seconds left of the auction
+80 seconds left of the auction
+2023/11/26 15:20:41 Recieved replicator update with highest bid habr 50
+70 seconds left of the auction
+2023/11/26 15:20:46 Recieved replicator update with highest bid tpep 70
+60 seconds left of the auction
+Primary replicator crashed! your id: 2 thier id: 1
+Setting up as primary
+2023/11/26 15:20:57 Primary replicator started on port 6969
+50 seconds left of the auction
+Recieved bid from: tpep for amount: 90
+Bid 90 from tpep is now the highest bid
+40 seconds left of the auction
+Recieved bid from: habr for amount: 100
+Bid 100 from habr is now the highest bid
+30 seconds left of the auction
+Recieved bid from: tpep for amount: 110
+Bid 110 from tpep is now the highest bid
+20 seconds left of the auction
+Recieved bid from: habr for amount: 120
+Bid 120 from habr is now the highest bid
+10 seconds left of the auction
+The auction is finished
+
+
+Client 1: 
+$ go run client/client.go --port 6969
+Please input name:
+habr
+the connection is: READY
+->bid TIME IS RUNNING OUT, ONLY 80 SECONDS LEFT
+->
+Unrecognized bid amount
+->bid 50
+NEW HIGHEST BID!! habr has bid 50!!
+->TIME IS RUNNING OUT, ONLY 70 SECONDS LEFT
+->NEW HIGHEST BID!! tpep has bid 70!!
+->TIME IS RUNNING OUT, ONLY 60 SECONDS LEFT
+->Server has crashed, reconnecting...
+the connection is: READY
+->TIME IS RUNNING OUT, ONLY 50 SECONDS LEFT
+->NEW HIGHEST BID!! tpep has bid 90!!
+->TIME IS RUNNING OUT, ONLY 40 SECONDS LEFT
+->bid 100
+NEW HIGHEST BID!! habr has bid 100!!
+->TIME IS RUNNING OUT, ONLY 30 SECONDS LEFT
+->NEW HIGHEST BID!! tpep has bid 110!!
+->TIME IS RUNNING OUT, ONLY 20 SECONDS LEFT
+->bid 120
+NEW HIGHEST BID!! habr has bid 120!!
+->!! 10 !!
+->!! 9 !!
+->!! 8 !!
+->!! 7 !!
+->!! 6 !!
+->!! 5 !!
+->!! 4 !!
+->!! 3 !!
+->!! 2 !!
+->!! 1 !!
+->!! 0 !!
+->THE AUCTION HAS CONCLUDED!!
+ WINNER: habr!!!
+ WITH THE BID: 120!!!
+->
+
+
+Client 2:
+
+$ go run client/client.go --port 6969
+Please input name:
+tpep
+the connection is: READY
+->TIME IS RUNNING OUT, ONLY 80 SECONDS LEFT
+->NEW HIGHEST BID!! habr has bid 50!!
+->TIME IS RUNNING OUT, ONLY 70 SECONDS LEFT
+->bid 70
+NEW HIGHEST BID!! tpep has bid 70!!
+->TIME IS RUNNING OUT, ONLY 60 SECONDS LEFT
+->Server has crashed, reconnecting...
+the connection is: READY
+->TIME IS RUNNING OUT, ONLY 50 SECONDS LEFT
+->bid 90
+NEW HIGHEST BID!! tpep has bid 90!!
+->TIME IS RUNNING OUT, ONLY 40 SECONDS LEFT
+->NEW HIGHEST BID!! habr has bid 100!!
+->TIME IS RUNNING OUT, ONLY 30 SECONDS LEFT
+->bid 110
+NEW HIGHEST BID!! tpep has bid 110!!
+->TIME IS RUNNING OUT, ONLY 20 SECONDS LEFT
+->NEW HIGHEST BID!! habr has bid 120!!
+->!! 10 !!
+->!! 9 !!
+->!! 8 !!
+->!! 7 !!
+->!! 6 !!
+->!! 5 !!
+->!! 4 !!
+->!! 3 !!
+->!! 2 !!
+->!! 1 !!
+->!! 0 !!
+->THE AUCTION HAS CONCLUDED!!
+ WINNER: habr!!!
+ WITH THE BID: 120!!!
+->
+

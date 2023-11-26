@@ -25,14 +25,16 @@ type Replicator struct {
 var (
 	port               = flag.String("port", "", "server port number")
 	role               = flag.String("role", "", "replicator role")
+	_auctionTime       = flag.Int("time", 60, "Time of the auction in seconds")
+	auctionTime    int = 60
 	highestBid         = &proto.Amount{Amount: 0}
 	bidUpdateChans     = []chan *proto.ReplicatorUpdate{}
 	id             int = 0
 	nextId         int
 	primaryId      int
-	auctionTime    int  = 300
 	timerStarted   bool = false
 	mute           sync.Mutex
+	isActive       bool = true
 )
 
 func (r *Replicator) Bid(ctx context.Context, amount *proto.Amount) (*proto.BidAck, error) {
@@ -60,6 +62,7 @@ func (r *Replicator) Result(ctx context.Context, _ *proto.Void) (*proto.Outcome,
 		HighestBid: highestBid,
 		IsResult:   auctionTime == 0,
 	}
+
 	return out, nil
 }
 
@@ -119,10 +122,15 @@ func updateTime() {
 		timerStarted = true
 		for auctionTime > 0 {
 			time.Sleep(time.Second)
-			println(auctionTime)
+			if auctionTime%10 == 0 {
+				println(fmt.Sprint(auctionTime) + " seconds left of the auction")
+			}
 			auctionTime--
 		}
-		timerStarted = false
+
+		println("The auction is finished")
+		time.Sleep(time.Second * 5)
+		isActive = false
 	}
 }
 
@@ -172,6 +180,7 @@ func checkError(err error) {
 
 func main() {
 	flag.Parse()
+	auctionTime = *_auctionTime
 
 	if *role == "primary" {
 		setupAsPrimary()
@@ -179,7 +188,7 @@ func main() {
 		go requestPrimaryConnection()
 	}
 
-	for {
+	for isActive {
 
 	}
 }

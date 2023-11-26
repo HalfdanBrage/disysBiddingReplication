@@ -21,6 +21,7 @@ var (
 	name       string
 	client     proto.BiddingClient
 	highestBid = &proto.Amount{Amount: 0}
+	isActive   = true
 )
 
 func ConnectToServer() {
@@ -48,7 +49,7 @@ func getHighestBid() {
 			handleHighestBid(ack)
 			if ack.IsResult {
 				cprint("THE AUCTION HAS CONCLUDED!! \n WINNER: " + ack.HighestBid.Name + "!!! \n WITH THE BID: " + fmt.Sprint(int(ack.HighestBid.Amount)) + "!!! ")
-				return
+				isActive = false
 			}
 		}
 	}
@@ -58,6 +59,11 @@ func handleHighestBid(ack *proto.Outcome) {
 	if !ack.IsResult && highestBid.Amount < ack.HighestBid.Amount {
 		cprint("NEW HIGHEST BID!! " + ack.HighestBid.Name + " has bid " + strconv.Itoa(int(ack.HighestBid.Amount)) + "!!")
 		highestBid = ack.HighestBid
+	}
+	if ack.TimeLeft <= 10 {
+		cprint("!! " + fmt.Sprint(int(ack.TimeLeft)) + " !!")
+	} else if ack.TimeLeft%10 == 0 {
+		cprint("TIME IS RUNNING OUT, ONLY " + fmt.Sprint(int(ack.TimeLeft)) + " SECONDS LEFT")
 	}
 }
 
@@ -80,31 +86,38 @@ func main() {
 		cprint(string(ack.HighestBid))
 	*/
 	go getHighestBid()
-	for {
-		input.Scan()
-		inputWords := strings.Split(input.Text(), " ")
-		if inputWords[0] == "bid" {
-			amt, err := strconv.Atoi(inputWords[1])
-			checkError(err)
-			if int(highestBid.Amount) >= amt {
-				cprint("Bid not high enough! " + highestBid.Name + " has bid " + strconv.Itoa(int(highestBid.Amount)) + "!")
-			} else {
-				bid := &proto.Amount{
-					Amount: int64(amt),
-					Name:   name,
-				}
-				_, err := client.Bid(context.Background(), bid)
+	go func() {
+		for {
+			input.Scan()
+			inputWords := strings.Split(input.Text(), " ")
+			if inputWords[0] == "bid" {
+				amt, err := strconv.Atoi(inputWords[1])
 				if err != nil {
-					cprint("Bid failed, please try again")
+					cprint("Unrecognized bid amount")
+				} else {
+					if int(highestBid.Amount) >= amt {
+						cprint("Bid not high enough! " + highestBid.Name + " has bid " + strconv.Itoa(int(highestBid.Amount)) + "!")
+					} else {
+						bid := &proto.Amount{
+							Amount: int64(amt),
+							Name:   name,
+						}
+						_, err := client.Bid(context.Background(), bid)
+						if err != nil {
+							cprint("Bid failed, please try again")
+						}
+					}
 				}
+			} else if inputWords[0] == "exit" {
+				cprint("Quitting bidding session...")
+				isActive = false
+			} else {
+				cprint("Unrecognized command")
 			}
-
-		} else if inputWords[0] == "exit" {
-			cprint("Quitting bidding session...")
-			return
-		} else {
-			cprint("Unrecognized command")
 		}
+	}()
+	for isActive {
+
 	}
 }
 
